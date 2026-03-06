@@ -1,20 +1,24 @@
+require('express-async-errors');
 const express = require('express');
 const connectDB = require('./config/db');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
-const port = 3000;
 
-app.get('/', (req, res) => {
-  res.send('Hello World!');
-});
+// middlewares
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use('/api/v1/auth', authRoutes);
 
 
+const port = process.env.PORT || 3000;
 const startServer = async () => {
   try {
     
     await connectDB(process.env.MONGO_URI);
     app.listen(port, () => {
-      console.log(`Example app listening at http://localhost:${port}`);
+      console.log(`App listening at http://localhost:${port}`);
     });
   } catch (err) {
     console.error(err.message);
