@@ -5,13 +5,17 @@ const authMiddleware = (req,res, next) => {
     const auth = req.headers.authorization
     if(!auth || !auth.startsWith('Bearer ')){throw new UnauthenticatedError('Cannot access')}
     const token = auth.split(' ')[1]
-    const payload = jwt.verify(token,process.env.JWT_SECRET)
+    try {
+        const payload = jwt.verify(token, process.env.JWT_SECRET)
 
-    req.user = {
-        userId:payload.userId,
-        name:payload.name
+        req.user = {
+            userId:payload.userId,
+            name:payload.name
+        }
+        next()
+    }catch(error){
+        throw new UnauthenticatedError('Authentication invalid')
     }
-    next()
 }
 
-modules.exports = authMiddleware;
+module.exports = authMiddleware
