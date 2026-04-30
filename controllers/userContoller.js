@@ -6,7 +6,10 @@ const {NotFoundError, BadRequestError} = require('../errors')
 
 const getProfile = async (req,res) => {
     const id = req.params.id
-    const user = await User.findById({_id:id}).select('-password')
+    const user = await User.findById({_id:id})
+      .select('-password')
+      .populate('followers', 'name username profilePic')
+      .populate('following', 'name username profilePic')
     if(!user) throw new NotFoundError(`User with ${id} not found.`)
     res.status(StatusCodes.OK).json({user})
 }
@@ -58,9 +61,54 @@ const updateProfilePicture = async (req, res) => {
 
   res.status(StatusCodes.OK).json({ user });
 };
+
+const followUser = async (req,res) => {
+  const { userId } = req.user;
+  const targetUserId = req.params.id;
+
+  if (userId === targetUserId) {
+    throw new BadRequestError('You cannot follow yourself');
+  }
+
+  const [currentUser, targetUser] = await Promise.all([
+    User.findById(userId),
+    User.findById(targetUserId),
+  ]);
+
+  if (!currentUser) {
+    throw new NotFoundError('Current user not found');
+  }
+
+  if (!targetUser) {
+    throw new NotFoundError('User to follow not found');
+  }
+
+  const alreadyFollowing = currentUser.following.some(
+    id => id.toString() === targetUserId
+  );
+
+  if (alreadyFollowing) {
+    await Promise.all([
+      User.findByIdAndUpdate(userId, { $pull: { following: targetUserId } }),
+      User.findByIdAndUpdate(targetUserId, { $pull: { followers: userId } }),
+    ]);
+
+    return res.status(StatusCodes.OK).json({ msg: 'User unfollowed successfully' });
+  }
+
+  await Promise.all([
+    User.findByIdAndUpdate(userId, { $addToSet: { following: targetUserId } }),
+    User.findByIdAndUpdate(targetUserId, { $addToSet: { followers: userId } }),
+  ]);
+
+  res.status(StatusCodes.OK).json({ msg: 'User followed successfully' });
+}
+
+
 module.exports = {
     getProfile,
     updateProfile,
     getAllProfiles,
     updateProfilePicture,
+    followUser
 }

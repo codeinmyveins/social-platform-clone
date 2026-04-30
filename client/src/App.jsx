@@ -7,6 +7,7 @@ import Feed from './pages/Feed.jsx';
 import NewPost from './pages/NewPost.jsx';
 import MyPosts from './pages/MyPosts.jsx';
 import Profile from './pages/Profile.jsx';
+import Users from './pages/Users.jsx';
 
 // simple JWT parser to extract payload
 function parseJwt(token) {
@@ -74,6 +75,9 @@ function Navbar() {
       <Link to="/my-posts" style={{ marginRight: '1rem' }}>
         My Posts
       </Link>
+      <Link to="/users" style={{ marginRight: '1rem' }}>
+        Users
+      </Link>
       <Link to="/profile" style={{ marginRight: '1rem' }}>
         Profile
       </Link>
@@ -134,6 +138,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Profile />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <PrivateRoute>
+                  <Users />
                 </PrivateRoute>
               }
             />

@@ -3,7 +3,14 @@ import { useAuth } from '../App.jsx';
 
 function Profile() {
   const { token, user } = useAuth(); // user contains userId, name, username, email from JWT
-  const [profile, setProfile] = useState({ name: '', username: '', bio: '', profilePic: '' });
+  const [profile, setProfile] = useState({
+    name: '',
+    username: '',
+    bio: '',
+    profilePic: '',
+    followers: [],
+    following: [],
+  });
   const [selectedImage, setSelectedImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,6 +38,8 @@ function Profile() {
           username: u.username || '',
           bio: u.bio || '',
           profilePic: u.profilePic || '',
+          followers: Array.isArray(u.followers) ? u.followers : [],
+          following: Array.isArray(u.following) ? u.following : [],
         });
       } catch (err) {
         setError(err.message);
@@ -145,6 +154,34 @@ function Profile() {
           }}
         />
       )}
+      <section style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+          <strong>{profile.followers.length} Followers</strong>
+          <strong>{profile.following.length} Following</strong>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div>
+            <h3>Followers</h3>
+            {profile.followers.length === 0 && <p>No followers yet.</p>}
+            {profile.followers.map(follower => (
+              <p key={follower._id} style={{ margin: '0.35rem 0' }}>
+                @{follower.username}
+              </p>
+            ))}
+          </div>
+
+          <div>
+            <h3>Following</h3>
+            {profile.following.length === 0 && <p>Not following anyone yet.</p>}
+            {profile.following.map(following => (
+              <p key={following._id} style={{ margin: '0.35rem 0' }}>
+                @{following.username}
+              </p>
+            ))}
+          </div>
+        </div>
+      </section>
       <form onSubmit={handleImageUpload} style={{ marginBottom: '1.5rem' }}>
         <div>
           <label htmlFor="profile-image">Profile Picture</label>

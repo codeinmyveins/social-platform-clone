@@ -38,7 +38,7 @@ const createPost = async (req, res) => {
   });
 
   const populatedPost = await Post.findById(post._id)
-    .populate('createdBy', 'username name profilePic');
+    .populate('createdBy', 'username name profilePic followers');
 
   res.status(StatusCodes.CREATED).json({ post: populatedPost });
 };
@@ -48,7 +48,7 @@ const getPost = async (req, res) => {
   const { params: { id: postId } } = req;
 
   const post = await Post.findById(postId)
-    .populate('createdBy', 'username name profilePic');
+    .populate('createdBy', 'username name profilePic followers');
 
   if (!post) {
     throw new NotFoundError('Post not found');
@@ -61,7 +61,7 @@ const getPost = async (req, res) => {
 const getAllPosts = async (req, res) => {
   const posts = await Post.find({})
     .sort('-createdAt')
-    .populate('createdBy', 'username profilePic');
+    .populate('createdBy', 'username name profilePic followers');
 
   res.status(StatusCodes.OK).json({ posts });
 };
@@ -70,7 +70,7 @@ const getAllPosts = async (req, res) => {
 const getMyPosts = async (req, res) => {
   const posts = await Post.find({ createdBy: req.user.userId })
     .sort('-createdAt')
-    .populate('createdBy', 'username name profilePic');
+    .populate('createdBy', 'username name profilePic followers');
 
   res.status(StatusCodes.OK).json({ posts });
 };
@@ -117,7 +117,7 @@ const toggleLike = async (req, res) => {
 
   // populate before sending response
   const updatedPost = await Post.findById(postId)
-    .populate('createdBy', 'username name profilePic');
+    .populate('createdBy', 'username name profilePic followers');
 
   res.status(StatusCodes.OK).json({ post: updatedPost });
 };
