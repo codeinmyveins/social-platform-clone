@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../App.jsx';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../auth.js';
 
 function Feed() {
   const { token, user } = useAuth();
@@ -8,7 +9,27 @@ function Feed() {
   const [followingUserId, setFollowingUserId] = useState('');
   const [error, setError] = useState('');
 
-  const toggleLike = async (postId) => {
+  const toggleLike = async (postId, isLiked) => {
+    const currentUserId = user?.userId;
+    if (!currentUserId) return;
+
+    setError('');
+    setPosts(prevPosts =>
+      prevPosts.map(post => {
+        if (post._id !== postId) return post;
+
+        const likedBy = Array.isArray(post.likedBy) ? post.likedBy : [];
+        const nextLikedBy = isLiked
+          ? likedBy.filter(id => id.toString() !== currentUserId)
+          : [...likedBy, currentUserId];
+
+        return {
+          ...post,
+          likedBy: nextLikedBy,
+        };
+      })
+    );
+
     try {
       const res = await fetch(`/api/v1/posts/${postId}/like`, {
         method: 'PATCH',
@@ -32,6 +53,21 @@ function Feed() {
 
     } catch (err) {
       setError(err.message);
+      setPosts(prevPosts =>
+        prevPosts.map(post => {
+          if (post._id !== postId) return post;
+
+          const likedBy = Array.isArray(post.likedBy) ? post.likedBy : [];
+          const nextLikedBy = isLiked
+            ? [...likedBy, currentUserId]
+            : likedBy.filter(id => id.toString() !== currentUserId);
+
+          return {
+            ...post,
+            likedBy: nextLikedBy,
+          };
+        })
+      );
     }
   };
 
@@ -111,56 +147,53 @@ function Feed() {
     if (token) fetchPosts();
   }, [token]);
 
-  if (loading) return <p>Loading feed...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  if (loading) return <p className="loading-state">Loading feed...</p>;
+  if (error) return <p className="alert alert--error">{error}</p>;
+
+  const visiblePosts = posts.filter(post => post.createdBy?._id !== user?.userId);
 
   return (
-    <div>
-      <h2>Feed</h2>
+    <section className="page-stack">
+      <div className="page-header">
+        <p className="eyebrow">Latest posts</p>
+        <h1>Feed</h1>
+      </div>
 
-      {posts.length === 0 && <p>No posts yet.</p>}
+      {visiblePosts.length === 0 && <p className="empty-state">No posts from other users yet.</p>}
 
-      {posts.map(post => {
+      <div className="post-list">
+        {visiblePosts.map(post => {
         const author = post.createdBy;
         const authorId = author?._id;
         const followers = Array.isArray(author?.followers) ? author.followers : [];
         const isMyPost = authorId === user?.userId;
         const isFollowing = followers.some(id => id.toString() === user?.userId);
         const isWorking = followingUserId === authorId;
+        const likedBy = Array.isArray(post.likedBy) ? post.likedBy : [];
+        const isLiked = likedBy.some(id => id.toString() === user?.userId);
 
         return (
           <article
             key={post._id}
-            style={{
-              border: '1px solid #ddd',
-              padding: '0.75rem',
-              marginBottom: '0.75rem'
-            }}
+            className="post-card"
           >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.75rem',
-              marginBottom: '0.75rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="post-card__top">
+            <div className="identity">
               {author?.profilePic && (
                 <img
                   src={author.profilePic}
                   alt={author.username || 'User'}
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                  }}
+                  className="avatar"
                 />
               )}
               <div>
-                <strong>@{author?.username || 'Unknown'}</strong>
+                {authorId ? (
+                  <Link to={`/users/${authorId}`} className="author-link">
+                    @{author?.username || 'Unknown'}
+                  </Link>
+                ) : (
+                  <strong>@{author?.username || 'Unknown'}</strong>
+                )}
                 <br />
                 <small>{followers.length} followers</small>
               </div>
@@ -169,6 +202,7 @@ function Feed() {
             {authorId && !isMyPost && (
               <button
                 type="button"
+                className="button button--ghost"
                 onClick={() => toggleFollow(authorId, isFollowing)}
                 disabled={isWorking}
               >
@@ -177,32 +211,34 @@ function Feed() {
             )}
           </div>
 
-          <h3>{post.title}</h3>
-          <p>{post.content}</p>
+          <h2 className="post-title">{post.title}</h2>
+          <p className="post-content">{post.content}</p>
           {post.image && (
             <img
               src={post.image}
               alt={post.title}
-              style={{
-                width: '100%',
-                maxHeight: '320px',
-                objectFit: 'cover',
-                borderRadius: '12px',
-                marginBottom: '0.75rem',
-              }}
+              className="post-image"
             />
           )}
 
-          {/* better to rely on likedBy */}
-          <small>Likes: {post.likedBy?.length || 0}</small>
-
-          <button onClick={() => toggleLike(post._id)}>
-            Like
-          </button>
+          <div className="post-actions">
+            <small>Likes: {likedBy.length}</small>
+            <button
+              type="button"
+              className={isLiked ? 'heart-button heart-button--liked' : 'heart-button'}
+              onClick={() => toggleLike(post._id, isLiked)}
+              aria-pressed={isLiked}
+              aria-label={isLiked ? 'Unlike post' : 'Like post'}
+              title={isLiked ? 'Unlike post' : 'Like post'}
+            >
+              {isLiked ? '♥' : '♡'}
+            </button>
+          </div>
         </article>
         );
       })}
-    </div>
+      </div>
+    </section>
   );
 }
 

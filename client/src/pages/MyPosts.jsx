@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../App.jsx';
+import { useAuth } from '../auth.js';
 
 function MyPosts() {
   const { token } = useAuth();
@@ -36,44 +36,38 @@ function MyPosts() {
     if (token) fetchMyPosts();
   }, [token]);
 
-  if (loading) return <p>Loading your posts...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  if (loading) return <p className="loading-state">Loading your posts...</p>;
+  if (error) return <p className="alert alert--error">{error}</p>;
 
   return (
-    <div>
-      <h2>My Posts</h2>
+    <section className="page-stack">
+      <div className="page-header">
+        <p className="eyebrow">Your archive</p>
+        <h1>My Posts</h1>
+      </div>
 
-      {posts.length === 0 && <p>You have not posted anything yet.</p>}
+      {posts.length === 0 && <p className="empty-state">You have not posted anything yet.</p>}
 
-      {posts.map(post => (
-        <article
-          key={post._id}
-          style={{
-            border: '1px solid #ddd',
-            padding: '0.75rem',
-            marginBottom: '0.75rem'
-          }}
-        >
-          <h3>{post.title}</h3>
-          <p>{post.content}</p>
+      <div className="post-list">
+        {posts.map(post => (
+          <article key={post._id} className="post-card">
+          <h2 className="post-title">{post.title}</h2>
+          <p className="post-content">{post.content}</p>
           {post.image && (
             <img
               src={post.image}
               alt={post.title}
-              style={{
-                width: '100%',
-                maxHeight: '320px',
-                objectFit: 'cover',
-                borderRadius: '12px',
-                marginBottom: '0.75rem',
-              }}
+              className="post-image"
             />
           )}
 
-          <small>Likes: {post.likedBy?.length || 0}</small>
+          <div className="post-actions">
+            <small>Likes: {post.likedBy?.length || 0}</small>
+          </div>
         </article>
       ))}
-    </div>
+      </div>
+    </section>
   );
 }
 

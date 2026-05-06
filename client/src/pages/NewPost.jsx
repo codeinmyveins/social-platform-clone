@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../App.jsx';
+import { useAuth } from '../auth.js';
 
 function NewPost() {
   const { token } = useAuth();
@@ -48,19 +48,23 @@ function NewPost() {
   };
 
   return (
-    <div>
-      <h2>New Post</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
+    <section className="page-stack page-stack--narrow">
+      <div className="page-header">
+        <p className="eyebrow">Create</p>
+        <h1>New Post</h1>
+      </div>
+      <div className="panel">
+        {error && <p className="alert alert--error">{error}</p>}
+        <form className="form" onSubmit={handleSubmit}>
+          <div className="field">
           <label>Title</label>
           <input name="title" value={form.title} onChange={handleChange} required />
-        </div>
-        <div>
+          </div>
+          <div className="field">
           <label>Content</label>
           <textarea name="content" value={form.content} onChange={handleChange} required rows={4} />
-        </div>
-        <div>
+          </div>
+          <div className="field">
           <label htmlFor="post-image">Image</label>
           <input
             id="post-image"
@@ -68,10 +72,11 @@ function NewPost() {
             accept="image/*"
             onChange={handleImageChange}
           />
-        </div>
-        <button type="submit">Publish</button>
-      </form>
-    </div>
+          </div>
+          <button className="button" type="submit">Publish</button>
+        </form>
+      </div>
+    </section>
   );
 }
 

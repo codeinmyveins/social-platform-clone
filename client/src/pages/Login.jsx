@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../App.jsx';
+import { useAuth } from '../auth.js';
 
 function Login() {
   const navigate = useNavigate();
@@ -34,23 +34,26 @@ function Login() {
   };
 
   return (
-    <div>
-      <h2>Login</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
+    <div className="auth-layout">
+      <section className="panel auth-card">
+        <p className="eyebrow">Welcome back</p>
+        <h1>Login</h1>
+        {error && <p className="alert alert--error">{error}</p>}
+        <form className="form" onSubmit={handleSubmit}>
+          <div className="field">
           <label>Email</label>
           <input name="email" type="email" value={form.email} onChange={handleChange} required />
-        </div>
-        <div>
+          </div>
+          <div className="field">
           <label>Password</label>
           <input name="password" type="password" value={form.password} onChange={handleChange} required />
-        </div>
-        <button type="submit">Login</button>
-      </form>
-      <p>
-        No account? <Link to="/signup">Sign up</Link>
-      </p>
+          </div>
+          <button className="button button--full" type="submit">Login</button>
+        </form>
+        <p className="switch-copy">
+          No account? <Link to="/signup">Sign up</Link>
+        </p>
+      </section>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../App.jsx';
+import { useAuth } from '../auth.js';
 
 function Users() {
   const { token, user } = useAuth();
@@ -78,16 +78,20 @@ function Users() {
     }
   };
 
-  if (loading) return <p>Loading users...</p>;
+  if (loading) return <p className="loading-state">Loading users...</p>;
 
   return (
-    <div>
-      <h2>Users</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+    <section className="page-stack">
+      <div className="page-header">
+        <p className="eyebrow">Community</p>
+        <h1>Users</h1>
+      </div>
+      {error && <p className="alert alert--error">{error}</p>}
 
-      {users.length === 0 && <p>No users found.</p>}
+      {users.length === 0 && <p className="empty-state">No users found.</p>}
 
-      {users.map(profile => {
+      <div className="user-list">
+        {users.map(profile => {
         const isMe = profile._id === user?.userId;
         const followers = Array.isArray(profile.followers) ? profile.followers : [];
         const isFollowing = followers.some(id => id.toString() === user?.userId);
@@ -96,36 +100,34 @@ function Users() {
         return (
           <article
             key={profile._id}
-            style={{
-              border: '1px solid #ddd',
-              padding: '0.75rem',
-              marginBottom: '0.75rem',
-            }}
+            className="user-card"
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              {profile.profilePic && (
+            <div className="user-card__body">
+              <div className="identity">
+                {profile.profilePic ? (
                 <img
                   src={profile.profilePic}
                   alt={profile.username || profile.name}
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    objectFit: 'cover',
-                    borderRadius: '50%',
-                  }}
+                  className="avatar"
                 />
+                ) : (
+                  <div className="avatar avatar--fallback">
+                    {(profile.name || profile.username || '?').charAt(0).toUpperCase()}
+                  </div>
               )}
 
-              <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0 }}>{profile.name}</h3>
-                <p style={{ margin: '0.25rem 0' }}>@{profile.username}</p>
-                {profile.bio && <p style={{ margin: 0 }}>{profile.bio}</p>}
+                <div>
+                <h3>{profile.name}</h3>
+                <p>@{profile.username}</p>
+                {profile.bio && <p>{profile.bio}</p>}
                 <small>{followers.length} followers</small>
+                </div>
               </div>
 
               {!isMe && (
                 <button
                   type="button"
+                  className="button button--ghost"
                   onClick={() => toggleFollow(profile._id, isFollowing)}
                   disabled={isWorking}
                 >
@@ -136,7 +138,8 @@ function Users() {
           </article>
         );
       })}
-    </div>
+      </div>
+    </section>
   );
 }
 

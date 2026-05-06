@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../App.jsx';
+import { useParams } from 'react-router-dom';
+import { useAuth } from '../auth.js';
 
 function Profile() {
   const { token, user } = useAuth(); // user contains userId, name, username, email from JWT
+  const { id } = useParams();
+  const profileUserId = id || user?.userId;
+  const isOwnProfile = !id || id === user?.userId;
   const [profile, setProfile] = useState({
     name: '',
     username: '',
@@ -15,16 +19,23 @@ function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [following, setFollowing] = useState(false);
   const [error, setError] = useState('');
   const [savedMsg, setSavedMsg] = useState('');
 
+  const isFollowing = profile.followers.some(follower => {
+    const followerId = typeof follower === 'string' ? follower : follower?._id;
+    return followerId?.toString() === user?.userId;
+  });
+
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!user?.userId) return;
+      if (!profileUserId) return;
       setLoading(true);
       setError('');
+      setSavedMsg('');
       try {
-        const res = await fetch(`/api/v1/users/${user.userId}`, {
+        const res = await fetch(`/api/v1/users/${profileUserId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
@@ -47,8 +58,8 @@ function Profile() {
         setLoading(false);
       }
     };
-    if (user) fetchProfile();
-  }, [user, token]);
+    if (profileUserId) fetchProfile();
+  }, [profileUserId, token]);
 
   const handleChange = (e) => {
     setProfile(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -107,7 +118,7 @@ function Profile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!user?.userId) return;
+    if (!isOwnProfile || !user?.userId) return;
     setSaving(true);
     setError('');
     setSavedMsg('');
@@ -133,87 +144,167 @@ function Profile() {
     }
   };
 
-  if (loading) return <p>Loading profile...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  const handleFollowToggle = async () => {
+    if (isOwnProfile || !profileUserId) return;
+
+    setFollowing(true);
+    setError('');
+    setSavedMsg('');
+
+    try {
+      const res = await fetch(`/api/v1/users/${profileUserId}/follow`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.msg || 'Failed to update follow status');
+      }
+
+      setProfile(prev => {
+        const followers = Array.isArray(prev.followers) ? prev.followers : [];
+        const nextFollowers = isFollowing
+          ? followers.filter(follower => {
+              const followerId = typeof follower === 'string' ? follower : follower?._id;
+              return followerId?.toString() !== user?.userId;
+            })
+          : [
+              ...followers,
+              {
+                _id: user.userId,
+                name: user.name,
+                username: user.username,
+              },
+            ];
+
+        return {
+          ...prev,
+          followers: nextFollowers,
+        };
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setFollowing(false);
+    }
+  };
+
+  if (loading) return <p className="loading-state">Loading profile...</p>;
 
   return (
-    <div>
-      <h2>My Profile</h2>
-      {savedMsg && <p style={{ color: 'green' }}>{savedMsg}</p>}
-      {profile.profilePic && (
-        <img
-          src={profile.profilePic}
-          alt={profile.username || 'Profile'}
-          style={{
-            width: '120px',
-            height: '120px',
-            objectFit: 'cover',
-            borderRadius: '50%',
-            display: 'block',
-            marginBottom: '1rem',
-          }}
-        />
-      )}
-      <section style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-          <strong>{profile.followers.length} Followers</strong>
-          <strong>{profile.following.length} Following</strong>
+    <section className="page-stack">
+      <div className="page-header">
+        <p className="eyebrow">Account</p>
+        <h1>{isOwnProfile ? 'My Profile' : `${profile.name || 'User'}'s Profile`}</h1>
+      </div>
+      {error && <p className="alert alert--error">{error}</p>}
+      {savedMsg && <p className="alert alert--success">{savedMsg}</p>}
+      <section className="panel">
+        <div className="profile-hero">
+          {profile.profilePic ? (
+            <img
+              src={profile.profilePic}
+              alt={profile.username || 'Profile'}
+              className="avatar avatar--large"
+            />
+          ) : (
+            <div className="avatar avatar--large avatar--fallback">
+              {(profile.name || profile.username || '?').charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div>
+            <p className="eyebrow">@{profile.username}</p>
+            <h2 className="post-title">{profile.name}</h2>
+            {profile.bio && <p className="post-content">{profile.bio}</p>}
+            {!isOwnProfile && (
+              <button
+                type="button"
+                className={isFollowing ? 'button button--ghost profile-action' : 'button profile-action'}
+                onClick={handleFollowToggle}
+                disabled={following}
+              >
+                {following ? 'Saving...' : isFollowing ? 'Unfollow' : 'Follow'}
+              </button>
+            )}
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          <div>
+        <div className="stats-row">
+          <div className="stat">
+            <strong>{profile.followers.length}</strong>
+            <span>Followers</span>
+          </div>
+          <div className="stat">
+            <strong>{profile.following.length}</strong>
+            <span>Following</span>
+          </div>
+        </div>
+
+        <div className="profile-grid">
+          <div className="mini-list">
             <h3>Followers</h3>
             {profile.followers.length === 0 && <p>No followers yet.</p>}
             {profile.followers.map(follower => (
-              <p key={follower._id} style={{ margin: '0.35rem 0' }}>
+              <p key={follower._id}>
                 @{follower.username}
               </p>
             ))}
           </div>
 
-          <div>
+          <div className="mini-list">
             <h3>Following</h3>
             {profile.following.length === 0 && <p>Not following anyone yet.</p>}
             {profile.following.map(following => (
-              <p key={following._id} style={{ margin: '0.35rem 0' }}>
+              <p key={following._id}>
                 @{following.username}
               </p>
             ))}
           </div>
         </div>
       </section>
-      <form onSubmit={handleImageUpload} style={{ marginBottom: '1.5rem' }}>
-        <div>
-          <label htmlFor="profile-image">Profile Picture</label>
-          <input
-            id="profile-image"
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-          />
-        </div>
-        <button type="submit" disabled={uploadingImage}>
-          {uploadingImage ? 'Uploading…' : 'Upload Image'}
-        </button>
-      </form>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Name</label>
-          <input name="name" value={profile.name} onChange={handleChange} required />
-        </div>
-        <div>
-          <label>Username</label>
-          <input name="username" value={profile.username} onChange={handleChange} required />
-        </div>
-        <div>
-          <label>Bio</label>
-          <textarea name="bio" value={profile.bio} onChange={handleChange} rows={3} />
-        </div>
-        <button type="submit" disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-      </form>
-    </div>
+      {isOwnProfile && (
+        <>
+          <section className="panel">
+            <form className="form" onSubmit={handleImageUpload}>
+              <div className="field">
+                <label htmlFor="profile-image">Profile Picture</label>
+                <input
+                  id="profile-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+              </div>
+              <button className="button" type="submit" disabled={uploadingImage}>
+                {uploadingImage ? 'Uploading…' : 'Upload Image'}
+              </button>
+            </form>
+          </section>
+          <section className="panel">
+            <form className="form" onSubmit={handleSubmit}>
+              <div className="field">
+                <label>Name</label>
+                <input name="name" value={profile.name} onChange={handleChange} required />
+              </div>
+              <div className="field">
+                <label>Username</label>
+                <input name="username" value={profile.username} onChange={handleChange} required />
+              </div>
+              <div className="field">
+                <label>Bio</label>
+                <textarea name="bio" value={profile.bio} onChange={handleChange} rows={3} />
+              </div>
+              <button className="button" type="submit" disabled={saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </form>
+          </section>
+        </>
+      )}
+    </section>
   );
 }
 
